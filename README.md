@@ -4,6 +4,8 @@ Uvedba pogodbe:
 Uvedite vašo pogodbo SimpleNFTSale na testno omrežje (npr. Sepolia) ali uporabite lokalno vozlišče (npr. Hardhat).
 
 Zapišite si naslov pogodbe (Contract Address).
+0x49D87fe14FC979Acb2A1b69dB583a478bCA80c25
+
 
 Priprava HTML:
 
