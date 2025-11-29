@@ -1,2 +1,239 @@
 # Demonstracija-Pametne-Pogodbe-SimpleNFTSale
 Demonstracija Pametne Pogodbe: SimpleNFTSale
+
+
+Odlična ideja! Za demonstracijo pametne pogodbe na spletu je spletni vmesnik (Web Interface) bistven.
+
+Najboljši način za hiter in interaktiven prikaz delovanja je uporaba knjižnic Ethers.js ali Web3.js za interakcijo s pogodbo in preprostega HTML/JavaScript/CSS za vmesnik.
+
+Spodaj je minimalističen primer kode, ki uporablja HTML in JavaScript za ustvarjanje spletnega vmesnika. Ta koda je zasnovana za delo z MetaMask (Injected Provider) na testnem omrežju ali lokalnem okolju (npr. Hardhat/Ganache/Remix VM), če ga nastavite.
+
+💻 Koda spletnega vmesnika (HTML + JavaScript)
+Shranite to kodo kot datoteko, npr. index.html.
+
+HTML
+
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple NFT Sale - Demonstracija</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+        h1, h2 { color: #333; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 4px; }
+        button:hover { background-color: #45a049; }
+        input[type="number"] { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        #output { margin-top: 20px; padding: 10px; border: 1px solid #eee; background-color: #f9f9f9; white-space: pre-wrap; }
+        .section { margin-bottom: 25px; padding: 15px; border: 1px solid #ddd; border-radius: 6px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Demonstracija Pametne Pogodbe: SimpleNFTSale</h1>
+        
+        <p>Preverite, da ste povezani z ustreznim omrežjem (npr. Sepolia) z MetaMaska.</p>
+
+        <div class="section">
+            <h2>⚙️ Konfiguracija Pogodbe</h2>
+            <p>Ta polja nastavite glede na to, kam ste pogodbo uvedli.</p>
+            <label for="contractAddress">Naslov Pogodbe:</label>
+            <input type="text" id="contractAddress" size="42" value="0x... (vstavite naslov pogodbe)">
+        </div>
+
+        <div class="section">
+            <h2>📊 Stanje NFT-ja</h2>
+            <button onclick="getInfo()">Prikaži Trenutno Stanje (getInfo)</button>
+            <div id="outputInfo">Čakam na podatke...</div>
+        </div>
+
+        <div class="section">
+            <h2>💰 Prodajalec (Lastnik Pogodbe)</h2>
+            <p>Za izvedbo transakcij morate biti povezani kot Lastnik pogodbe.</p>
+            
+            <label for="tokenIdInput">ID žetona (NFT ID):</label>
+            <input type="number" id="tokenIdInput" value="1">
+            <button onclick="mintCar()">1. Skovanje (mintCar)</button>
+            
+            <br><br>
+            <label for="priceWeiInput">Cena (v Wei):</label>
+            <input type="number" id="priceWeiInput" value="1000000000000000000"> 
+            <button onclick="setForSale()">2. Daj naprodaj (setForSale)</button>
+        </div>
+
+        <div class="section">
+            <h2>💸 Kupec</h2>
+            <p>Za nakup se preklopite na drug naslov v MetaMasku, ki ima dovolj ETH.</p>
+            <button onclick="buyNFT()">3. Kupi (buy) - Potreben ETH v "Value"</button>
+        </div>
+
+        <div id="output"></div>
+    </div>
+
+    <script>
+        // 1. Nastavitev ABI in naslova pogodbe
+        const contractABI = [
+            // Samo potrebne funkcije za vmesnik: mintCar, setForSale, buy, getInfo, ownerOf (če je potrebna)
+            { "inputs": [ { "internalType": "uint256", "name": "_tokenId", "type": "uint256" } ], "name": "mintCar", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+            { "inputs": [ { "internalType": "uint256", "name": "_price", "type": "uint256" } ], "name": "setForSale", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+            { "inputs": [], "name": "buy", "outputs": [], "stateMutability": "payable", "type": "function" },
+            { "inputs": [], "name": "getInfo", "outputs": [ { "internalType": "uint256", "name": "_id", "type": "uint256" }, { "internalType": "address", "name": "_owner", "type": "address" }, { "internalType": "uint256", "name": "_price", "type": "uint256" }, { "internalType": "bool", "name": "_forSale", "type": "bool" } ], "stateMutability": "view", "type": "function" }
+            // Dodajte celoten ABI, če se vam Remix ne zgenerira avtomatsko.
+        ];
+        
+        // Pomožni funkcii za interakcijo
+        async function getContract() {
+            if (typeof window.ethereum === 'undefined') {
+                log('NAPAKA: Prosimo, namestite MetaMask (ali podoben Ethereum ponudnik).', true);
+                return null;
+            }
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const contractAddress = document.getElementById('contractAddress').value;
+            
+            if (!contractAddress || contractAddress.length < 42 || !contractAddress.startsWith('0x')) {
+                log('NAPAKA: Prosimo, vnesite veljaven naslov pogodbe.', true);
+                return null;
+            }
+            
+            return new ethers.Contract(contractAddress, contractABI, signer);
+        }
+
+        function log(message, isError = false) {
+            const outputDiv = document.getElementById('output');
+            const color = isError ? 'red' : 'green';
+            outputDiv.innerHTML += `<p style="color: ${color};"><strong>[${new Date().toLocaleTimeString()}]</strong> ${message}</p>`;
+        }
+
+        // FUNKCIJE POGODBE
+        
+        async function getInfo() {
+            const contract = await getContract();
+            if (!contract) return;
+
+            try {
+                const [id, owner, price, forSale] = await contract.getInfo();
+                
+                const ethPrice = ethers.formatEther(price);
+                const resultText = `
+                    NFT ID: ${id.toString()}
+                    Trenutni lastnik: ${owner}
+                    Cena: ${ethPrice} ETH (${price.toString()} Wei)
+                    Naprodaj?: ${forSale ? 'DA' : 'NE'}
+                `;
+                document.getElementById('outputInfo').innerText = resultText;
+                log('Stanje uspešno pridobljeno.');
+                
+            } catch (error) {
+                log(`NAPAKA pri klicanju getInfo: ${error.message || error}`, true);
+            }
+        }
+        
+        async function mintCar() {
+            const contract = await getContract();
+            if (!contract) return;
+            const tokenId = document.getElementById('tokenIdInput').value;
+
+            try {
+                log(`Začenjam transakcijo 'mintCar' za ID ${tokenId}...`);
+                const tx = await contract.mintCar(tokenId);
+                await tx.wait();
+                log(`Uspešno skovano! Transakcija: ${tx.hash}`);
+                getInfo();
+            } catch (error) {
+                log(`NAPAKA pri mintCar: ${error.message || error}`, true);
+            }
+        }
+        
+        async function setForSale() {
+            const contract = await getContract();
+            if (!contract) return;
+            const priceWei = document.getElementById('priceWeiInput').value;
+
+            try {
+                log(`Začenjam transakcijo 'setForSale' s ceno ${ethers.formatEther(priceWei)} ETH...`);
+                const tx = await contract.setForSale(priceWei);
+                await tx.wait();
+                log(`Uspešno nastavljeno za prodajo! Transakcija: ${tx.hash}`);
+                getInfo();
+            } catch (error) {
+                log(`NAPAKA pri setForSale: ${error.message || error}`, true);
+            }
+        }
+
+        async function buyNFT() {
+            const contract = await getContract();
+            if (!contract) return;
+
+            try {
+                // Najprej pridobi ceno iz pogodbe
+                const [, , price] = await contract.getInfo();
+                const ethValue = price.toString();
+
+                log(`Začenjam transakcijo 'buy' s plačilom ${ethers.formatEther(ethValue)} ETH...`);
+                
+                const tx = await contract.buy({ value: ethValue });
+                await tx.wait();
+                
+                log(`Uspešen nakup! Transakcija: ${tx.hash}`);
+                getInfo();
+            } catch (error) {
+                log(`NAPAKA pri buy: ${error.message || error}`, true);
+                log("Preverite: 1. Ste preklopili na račun Kupca? 2. Ste vnesli pravilno ceno?", true);
+            }
+        }
+
+    </script>
+</body>
+</html>
+🚀 Navodila za demonstracijo s spletnim vmesnikom
+Uvedba pogodbe:
+
+Uvedite vašo pogodbo SimpleNFTSale na testno omrežje (npr. Sepolia) ali uporabite lokalno vozlišče (npr. Hardhat).
+
+Zapišite si naslov pogodbe (Contract Address).
+
+Priprava HTML:
+
+Shranite zgornjo kodo kot index.html.
+
+Odprite datoteko index.html v brskalniku (npr. Chrome ali Firefox).
+
+Konfiguracija vmesnika:
+
+V polje "Naslov Pogodbe" vnesite naslov pogodbe, ki ste si ga zapisali v 1. koraku.
+
+Demonstracija (koraki):
+
+A. Prodajalec (Lastnik):
+
+Preverite, da ste povezani kot Lastnik pogodbe v MetaMasku.
+
+Kliknite "1. Skovanje (mintCar)" (transakcijo potrdite v MetaMasku).
+
+V polje za ceno vnesite želeno vrednost (privzeto je 1 ETH v wei-ih).
+
+Kliknite "2. Daj naprodaj (setForSale)" (transakcijo potrdite v MetaMasku).
+
+B. Preverjanje:
+
+Kliknite "Prikaži Trenutno Stanje (getInfo)". Izhod bi moral pokazati, da je Naprodaj? DA.
+
+C. Kupec:
+
+V MetaMasku preklopite na drugi račun (račun Kupca), ki ima dovolj ETH za nakup.
+
+Kliknite "3. Kupi (buy)". Funkcija samodejno prebere ceno, nastavi value in zahteva transakcijo. Potrdite jo.
+
+D. Preverjanje prenosa:
+
+Ponovno kliknite "Prikaži Trenutno Stanje (getInfo)".
+
+Izhod mora pokazati, da je Trenutni lastnik zdaj naslov Kupca in Naprodaj? je NE.
+
+Ta vmesnik zagotavlja vsa potrebna interaktivna orodja za popolno in jasno demonstracijo vaše pametne pogodbe.
+
+Ali želite, da vam pomagam s pridobivanjem celotnega ABI-ja (Application Binary Interface) vaše pogodbe, ki ga potrebujete za popolno delovanje JavaScripta?
